@@ -9,46 +9,60 @@
 //   Rene Milk       (2013 - 2016)
 //   Tobias Leibner  (2014)
 
-#ifndef DUNE_XT_FUNCTIONS_VISUALIZATION_HH
-#define DUNE_XT_FUNCTIONS_VISUALIZATION_HH
-
-#include <boost/numeric/conversion/cast.hpp>
+#ifndef DUNE_XT_FUNCTIONS_BASE_VISUALIZATION_HH
+#define DUNE_XT_FUNCTIONS_BASE_VISUALIZATION_HH
 
 #include <dune/grid/io/file/vtk/function.hh>
 
-#include <dune/xt/common/float_cmp.hh>
+#include <dune/xt/common/numeric_cast.hh>
 #include <dune/xt/grid/type_traits.hh>
-
-#include "interfaces.hh"
+#include <dune/xt/functions/interfaces/localizable-function.hh>
 
 namespace Dune {
 namespace XT {
 namespace Functions {
 
 
-template <class GridViewType, size_t dimRange, size_t dimRangeCols>
-class VisualizationAdapterFunction : public VTKFunction<GridViewType>
+template <class GridViewType, size_t dimRange, size_t dimRangeCols, class RangeFieldImp>
+class VisualizationAdapter : public VTKFunction<GridViewType>
 {
+  static_assert(XT::Grid::is_grid_view<GridViewType>::value, "");
+
 public:
   using EntityType = XT::Grid::extract_entity_t<GridViewType>;
+  using LocalizableFunctionType = LocalizableFunctionInterface<EntityType, dimRange, dimRangeCols, RangeFieldImp>;
 
-  typedef typename GridViewType::ctype DomainFieldType;
-  static const size_t dimDomain = GridViewType::dimension;
-  typedef FieldVector<DomainFieldType, dimDomain> DomainType;
+private:
+  using LocalFunctionType = typename LocalizableFunctionType::LocalFunctionType;
+  using DomainType = typename LocalFunctionType::DomainType;
+  using RangeType = typename LocalFunctionType::RangeType;
 
-  typedef LocalizableFunctionInterface<EntityType, DomainFieldType, dimDomain, double, dimRange, dimRangeCols>
-      FunctionType;
-
-  VisualizationAdapterFunction(const FunctionType& function, const std::string nm = "")
-    : function_(function)
-    , tmp_value_(0)
-    , name_(nm)
+public:
+  VisualizationAdapter(const LocalizableFunctionType& localizable_function, const std::string nm = "")
+    : local_function_(localizable_function.local_function())
+    , name_(nm.empty() ? localizable_function.name() : nm)
   {
   }
 
+  int ncomps() const override final
+  {
+    return helper<>::ncomps();
+  }
+
+  std::string name() const override final
+  {
+    return name_;
+  }
+
+  double evaluate(int comp, const EntityType& en, const DomainType& xx) const override final
+  {
+    local_function_->bind(en);
+    return helper<>::evaluate(comp, local_function_->evaluate(xx));
+  }
+
 private:
-  template <size_t r, size_t rC, bool anything = true>
-  class Call
+  template <size_t r_ = dimRange, size_t rC_ = dimRangeCols, bool anything = true>
+  class helper
   {
   public:
     static int ncomps()
@@ -56,59 +70,36 @@ private:
       return 1;
     }
 
-    static double evaluate(const int& /*comp*/, const typename FunctionType::RangeType& val)
+    static double evaluate(const int& /*comp*/, const RangeType& val)
     {
       return val.frobenius_norm();
     }
-  }; // class Call
+  }; // class helper<...>
 
-  template <size_t r, bool anything>
-  class Call<r, 1, anything>
+  template <size_t r_, bool anything>
+  class helper<r_, 1, anything>
   {
   public:
     static int ncomps()
     {
-      return r;
+      return r_;
     }
 
-    static double evaluate(const int& comp, const typename FunctionType::RangeType& val)
+    static double evaluate(const int& comp, const RangeType& val)
     {
+      assert(comp >= 0);
+      assert(comp < r_);
       return val[comp];
     }
-  }; // class Call< ..., 1, ... >
+  }; // class helper<..., 1>
 
-public:
-  virtual int ncomps() const override final
-  {
-    return Call<dimRange, dimRangeCols>::ncomps();
-  }
-
-  virtual std::string name() const override final
-  {
-    if (name_.empty())
-      return function_.name();
-    else
-      return name_;
-  }
-
-  virtual double evaluate(int comp, const EntityType& en, const DomainType& xx) const override final
-  {
-    assert(comp >= 0);
-    assert(comp < boost::numeric_cast<int>(dimRange));
-    const auto local_func = function_.local_function(en);
-    local_func->evaluate(xx, tmp_value_);
-    return Call<dimRange, dimRangeCols>::evaluate(comp, tmp_value_);
-  }
-
-private:
-  const FunctionType& function_;
-  mutable typename FunctionType::RangeType tmp_value_;
+  mutable std::unique_ptr<LocalFunctionType> local_function_;
   const std::string name_;
-}; // class VisualizationAdapterFunction
+}; // class VisualizationAdapter
 
 
 } // namespace Functions
 } // namespace XT
 } // namespace Dune
 
-#endif // DUNE_XT_FUNCTIONS_VISUALIZATION_HH
+#endif // DUNE_XT_FUNCTIONS_BASE_VISUALIZATION_HH
