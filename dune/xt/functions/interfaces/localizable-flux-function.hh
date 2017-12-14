@@ -67,6 +67,16 @@ public:
 
   virtual std::unique_ptr<LocalfunctionType> local_function(const EntityType& /*entity*/) const = 0;
 
+  virtual const std::vector<RangeFieldType>& regularization_parameters() const
+  {
+    return std::vector<RangeFieldType>();
+  }
+
+  virtual StateRangeType get_isotropic_moment(const StateRangeType& /*u*/) const
+  {
+    return RangeType(0.);
+  }
+
   /**
    * \name ´´These methods should be implemented in order to identify the function.''
    * \{
