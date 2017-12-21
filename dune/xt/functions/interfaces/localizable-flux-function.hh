@@ -74,7 +74,7 @@ public:
 
   virtual StateRangeType get_isotropic_moment(const StateRangeType& /*u*/) const
   {
-    return RangeType(0.);
+    return StateRangeType(0.);
   }
 
   /**
