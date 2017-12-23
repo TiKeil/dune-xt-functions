@@ -81,6 +81,12 @@ public:
                         RangeType& /*ret*/,
                         const Common::Parameter& /*mu*/ = {}) const = 0;
 
+  virtual void calculate_alpha(const DomainType& /*x_local*/,
+                               const StateRangeType& /*u_in*/,
+                               const XT::Common::Parameter& /*param*/) const
+  {
+  }
+
   virtual void evaluate_col(const size_t /*col*/,
                             const DomainType& /*x*/,
                             const StateRangeType& /*u*/,

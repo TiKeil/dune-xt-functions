@@ -72,6 +72,10 @@ public:
     return std::vector<RangeFieldType>();
   }
 
+  virtual void reset_regularization() const
+  {
+  }
+
   virtual StateRangeType get_isotropic_moment(const StateRangeType& /*u*/) const
   {
     return StateRangeType(0.);
