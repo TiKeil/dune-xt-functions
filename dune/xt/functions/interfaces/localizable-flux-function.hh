@@ -69,15 +69,18 @@ public:
 
   virtual const std::vector<RangeFieldType>& regularization_parameters() const
   {
+    DUNE_THROW(NotImplemented, "");
     return std::vector<RangeFieldType>();
   }
 
   virtual void reset_regularization() const
   {
+    DUNE_THROW(NotImplemented, "");
   }
 
   virtual StateRangeType get_isotropic_moment(const StateRangeType& /*u*/) const
   {
+    DUNE_THROW(NotImplemented, "");
     return StateRangeType(0.);
   }
 
@@ -95,8 +98,8 @@ public:
     return "fluxfunction";
   }
   /**
-    * \}
-    */
+   * \}
+   */
 }; // class LocalizableFluxFunctionInterface
 
 
